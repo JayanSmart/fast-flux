@@ -5,7 +5,9 @@
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
     nixpkgs-python.url = "github:cachix/nixpkgs-python";
-    nixpkgs-python.inputs = { nixpkgs.follows = "nixpkgs"; };
+    nixpkgs-python.inputs = {
+      nixpkgs.follows = "nixpkgs";
+    };
 
     # Neovim with a nice sane configuration
     neovim-config = {
@@ -21,37 +23,46 @@
 
   description = "Playing with flakes as a development environement";
 
-  outputs = { self, nixpkgs, devenv, systems, neovim-config, ... } @ inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      devenv,
+      systems,
+      neovim-config,
+      ...
+    }@inputs:
     let
       forEachSystem = nixpkgs.lib.genAttrs (import systems);
-    in {
+    in
+    {
       packages = forEachSystem (system: {
         devenv-up = self.devShells.${system}.default.config.procfileScript;
       });
 
-      devShells = forEachSystem
-        (system:
-          let
-            pkgs = nixpkgs.legacyPackages.${system};
-          in
-          {
-            default = devenv.lib.mkShell {
-              inherit inputs pkgs;
-              modules = [
-                {
-                  # https://devenv.sh/reference/options/
-                  packages = [ neovim-config.packages.aarch64-darwin.neovim ];
-                  enterShell = ''
-                  '';
-                  languages.python = {
-                    enable = true;
-                    version = "3.11.3";
-                    venv.enable = true;
-                    venv.requirements = ./requirements.txt;
-                  };
-                }
-              ];
-            };
-          });
+      devShells = forEachSystem (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = devenv.lib.mkShell {
+            inherit inputs pkgs;
+            modules = [
+              {
+                # https://devenv.sh/reference/options/
+                packages = [ neovim-config.packages.${system}.neovim ];
+                enterShell = '''';
+                languages.python = {
+                  enable = true;
+                  version = "3.11.3";
+                  venv.enable = true;
+                  venv.requirements = ./requirements.txt;
+                };
+              }
+            ];
+          };
+        }
+      );
     };
 }
